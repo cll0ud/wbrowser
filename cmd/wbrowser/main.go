@@ -15,16 +15,32 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
 func main() {
+	// when running as default browser for Windows, the working directory
+	// becomes the place where the program was called, which means we can't
+	// know where config or error file is, so we get the absolute path to
+	// wbrowser OR current wd if we're debugging
+	debug := flag.Bool("debug", false, "debug mode")
+	flag.Parse()
+	var dir string
+	var err error
+
+	if *debug {
+		dir, err = os.Getwd()
+	} else {
+		dir, err = filepath.Abs(filepath.Dir(os.Args[0]))
+	}
+
 	// error log
-	log := NewErrorLog()
+	log := NewErrorLog(dir)
 	defer log.Close()
 
 	// read settings file
-	src, err := ioutil.ReadFile("./config.json")
+	src, err := ioutil.ReadFile(dir + "/config.json")
 	if err != nil {
 		log.Fatalf("Error reading config file - %v", err)
 	}
@@ -37,7 +53,6 @@ func main() {
 
 	var domain Domain
 	var target string
-	flag.Parse()
 	args := flag.Args()
 	if len(args) > 0 && args[0] != "" {
 		urlObj, err := url.Parse(args[0])

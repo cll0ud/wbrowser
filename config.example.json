@@ -1,0 +1,16 @@
+{
+  "browsers": {
+    "chrome": "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+    "firefox": "C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe"
+  },
+  "redirects": [
+    "t.co",
+    "tiny.cc",
+    "bit.ly"
+  ],
+  "domains": {
+    "default": "chrome",
+    "github.com": "firefox",
+    "golang.org": "firefox"
+  }
+}

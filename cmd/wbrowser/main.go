@@ -36,19 +36,19 @@ func main() {
 	}
 
 	// error log
-	log := NewErrorLog(dir)
-	defer log.Close()
+	logger := NewErrorLog(dir)
+	defer logger.Close()
 
 	// read settings file
 	src, err := ioutil.ReadFile(dir + "/config.json")
 	if err != nil {
-		log.Fatalf("Error reading config file - %v", err)
+		logger.Fatalf("Error reading config file - %v", err)
 	}
 
 	var config Config
 	err = json.Unmarshal(src, &config)
 	if err != nil {
-		log.Fatalf("Error parsing config file - %v", err)
+		logger.Fatalf("Error parsing config file - %v", err)
 	}
 
 	var domain Domain
@@ -57,7 +57,7 @@ func main() {
 	if len(args) > 0 && args[0] != "" {
 		urlObj, err := url.Parse(args[0])
 		if err != nil {
-			log.Fatalf("Error parsing url - %v", err)
+			logger.Fatalf("Error parsing url - %v", err)
 		}
 
 		domain = Domain(urlObj.Host)
@@ -77,7 +77,7 @@ func main() {
 		if val == domain {
 			response, err := http.Get(target)
 			if err != nil {
-				log.Fatalf("Error - url unreachable - %v", err)
+				logger.Fatalf("Error - url unreachable - %v", err)
 			}
 			target = response.Request.URL.String()
 			domain = Domain(response.Request.URL.Host)

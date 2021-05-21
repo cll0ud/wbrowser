@@ -68,11 +68,14 @@ func main() {
 		}
 	}
 
+	// no domain or url, just open the default browser
 	if domain == "" || target == "" {
-		log.Fatalf("Error - no url")
+		run(logger, string(config.Browsers[config.Domains[DefaultBrowser]]), args...)
+		return
 	}
 
-	// checks if the domain is a redirector
+	// checks if the domain is a redirector so we can fetch the real url
+	// and decide which browser to run
 	for _, val := range config.Redirects {
 		if val == domain {
 			response, err := http.Get(target)
@@ -102,9 +105,11 @@ func main() {
 	}
 
 	// run the chosen browser
-	cmd := exec.Command(string(config.Browsers[whichBrowser]), args...)
-	if err := cmd.Start(); err != nil {
-		log.Fatalf("Error - could not open browser - %v", err)
+	run(logger, string(config.Browsers[whichBrowser]), args...)
+}
+
+func run(logger *ErrorLog, browser string, args ...string) {
+	if err := exec.Command(browser, args...).Start(); err != nil {
+		logger.Fatalf("Error - could not open browser - %v", err)
 	}
-	os.Exit(0)
 }

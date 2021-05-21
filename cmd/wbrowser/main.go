@@ -36,19 +36,19 @@ func main() {
 	}
 
 	// error log
-	log := NewErrorLog(dir)
-	defer log.Close()
+	logger := NewErrorLog(dir)
+	defer logger.Close()
 
 	// read settings file
 	src, err := ioutil.ReadFile(dir + "/config.json")
 	if err != nil {
-		log.Fatalf("Error reading config file - %v", err)
+		logger.Fatalf("Error reading config file - %v", err)
 	}
 
 	var config Config
 	err = json.Unmarshal(src, &config)
 	if err != nil {
-		log.Fatalf("Error parsing config file - %v", err)
+		logger.Fatalf("Error parsing config file - %v", err)
 	}
 
 	var domain Domain
@@ -57,7 +57,7 @@ func main() {
 	if len(args) > 0 && args[0] != "" {
 		urlObj, err := url.Parse(args[0])
 		if err != nil {
-			log.Fatalf("Error parsing url - %v", err)
+			logger.Fatalf("Error parsing url - %v", err)
 		}
 
 		domain = Domain(urlObj.Host)
@@ -68,16 +68,19 @@ func main() {
 		}
 	}
 
+	// no domain or url, just open the default browser
 	if domain == "" || target == "" {
-		log.Fatalf("Error - no url")
+		run(logger, string(config.Browsers[config.Domains[DefaultBrowser]]), args...)
+		return
 	}
 
-	// checks if the domain is a redirector
+	// checks if the domain is a redirector so we can fetch the real url
+	// and decide which browser to run
 	for _, val := range config.Redirects {
 		if val == domain {
 			response, err := http.Get(target)
 			if err != nil {
-				log.Fatalf("Error - url unreachable - %v", err)
+				logger.Fatalf("Error - url unreachable - %v", err)
 			}
 			target = response.Request.URL.String()
 			domain = Domain(response.Request.URL.Host)
@@ -87,9 +90,17 @@ func main() {
 
 	whichBrowser, ok := config.Domains[domain]
 	// if no browser found, check if url contains one of the available domains
+	// this will match subdomains, so if you need a specific subdomain to match
+	// a different browser you should put that subdomain on the config file
+	//
+	// e.g.: if you have youtube.com on your config file and the url you're
+	// trying to open is "www.youtube.com" the following code will match that
+	// if you have "google.com" and the url to open is "mail.google.com" (gmail)
+	// or "play.google.com" (playstore) they will also open with the same browser
+	// as "google.com" UNLESS you have an specific rule for these subdomains
 	if !ok || whichBrowser == "" {
 		for k, v := range config.Domains {
-			if strings.Contains(string(k), string(domain)) {
+			if strings.Contains(string(domain), string(k)) {
 				whichBrowser = v
 				break
 			}
@@ -102,9 +113,11 @@ func main() {
 	}
 
 	// run the chosen browser
-	cmd := exec.Command(string(config.Browsers[whichBrowser]), args...)
-	if err := cmd.Start(); err != nil {
-		log.Fatalf("Error - could not open browser - %v", err)
+	run(logger, string(config.Browsers[whichBrowser]), args...)
+}
+
+func run(logger *ErrorLog, browser string, args ...string) {
+	if err := exec.Command(browser, args...).Start(); err != nil {
+		logger.Fatalf("Error - could not open browser - %v", err)
 	}
-	os.Exit(0)
 }

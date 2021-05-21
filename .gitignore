@@ -4,4 +4,4 @@
 *.exe
 /dist
 /dist/*
-
+config.json
